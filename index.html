@@ -971,19 +971,45 @@
             }
         }
         
+        // CORS 代理列表，按优先级排序
+        const corsProxies = [
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        ];
+        
+        async function fetchWithCorsProxy(url) {
+            // 先尝试直接请求
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    return await response.json();
+                }
+            } catch (e) {
+                console.log('直接请求失败，尝试使用代理');
+            }
+            
+            // 尝试各个代理
+            for (const proxyFn of corsProxies) {
+                try {
+                    const proxyUrl = proxyFn(url);
+                    const response = await fetch(proxyUrl);
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (e) {
+                    console.log('代理请求失败，尝试下一个');
+                }
+            }
+            
+            throw new Error('所有请求方式均失败');
+        }
+        
         async function lookupByAppId(appId) {
             const url = `https://itunes.apple.com/lookup?id=${appId}`;
             console.log('正在查询App ID:', appId, 'URL:', url);
             
             try {
-                const response = await fetch(url);
-                console.log('API响应状态:', response.status);
-                
-                if (!response.ok) {
-                    throw new Error(`API请求失败，状态码: ${response.status}`);
-                }
-                
-                const data = await response.json();
+                const data = await fetchWithCorsProxy(url);
                 console.log('API响应数据:', data);
                 return data;
             } catch (error) {
@@ -997,14 +1023,7 @@
             console.log('正在查询Bundle ID:', bundleId, '国家:', country, 'URL:', url);
             
             try {
-                const response = await fetch(url);
-                console.log('API响应状态:', response.status);
-                
-                if (!response.ok) {
-                    throw new Error(`API请求失败，状态码: ${response.status}`);
-                }
-                
-                const data = await response.json();
+                const data = await fetchWithCorsProxy(url);
                 console.log('API响应数据:', data);
                 return data;
             } catch (error) {
