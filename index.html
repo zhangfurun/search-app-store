@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Store 信息查询工具 - V3</title>
+    <style>
+        /* 苹果风格设计系统 */
+        :root {
+            --apple-blue: #0071e3;
+            --apple-dark-blue: #2997ff;
+            --apple-light-gray: #f5f5f7;
+            --apple-medium-gray: #e0e0e0;
+            --apple-dark-gray: #86868b;
+            --apple-black: #1d1d1f;
+            --apple-white: #ffffff;
+            --apple-system-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        body {
+            font-family: var(--apple-system-font);
+            background-color: var(--apple-light-gray);
+            margin: 0;
+            padding: 0;
+            color: var(--apple-black);
+            line-height: 1.5;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        /* 左侧边栏 */
+        .sidebar {
+            width: 350px;
+            background: var(--apple-white);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid var(--apple-medium-gray);
+            flex-shrink: 0;
+        }
+        
+        /* 右侧面板 */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--apple-medium-gray);
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--apple-black);
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            color: var(--apple-dark-gray);
+            font-size: 14px;
+            margin-top: 6px;
+            font-weight: 400;
+        }
+        
+        .search-container {
+            background: var(--apple-white);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--apple-black);
+            font-size: 14px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--apple-medium-gray);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: var(--apple-system-font);
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--apple-blue);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+        }
+        
+        .search-btn-container {
+            margin-top: 8px;
+        }
+        
+        button {
+            background-color: var(--apple-blue);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            font-family: var(--apple-system-font);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 113, 227, 0.3);
+        }
+        
+        .search-btn-container button {
+            width: 100%;
+            background: linear-gradient(135deg, #2997ff 0%, #af52de 100%);
+            box-shadow: 0 4px 12px rgba(41, 151, 255, 0.35);
+        }
+        
+        .search-btn-container button:hover {
+            background: linear-gradient(135deg, #0077ed 0%, #9b3dcc 100%);
+            box-shadow: 0 6px 16px rgba(41, 151, 255, 0.45);
+        }
+        
+        button:hover {
+            background-color: var(--apple-dark-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 113, 227, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .progress-container {
+            background: var(--apple-white);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            display: none; /* 默认隐藏 */
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+        
+        .progress-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--apple-black);
+            margin: 0;
+        }
+        
+        .toggle-icon {
+            font-size: 14px;
+            transition: transform 0.3s ease;
+        }
+        
+        .progress-header.collapsed .toggle-icon {
+            transform: rotate(180deg);
+        }
+        
+        .countries-grid-container {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .countries-grid-container.collapsed {
+            max-height: 0;
+        }
+        
+        .countries-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+        }
+        
+        .country-item {
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            background: var(--apple-light-gray);
+            font-size: 12px;
+            word-break: break-all;
+        }
+        
+        .country-item.processing {
+            background: #e3f2fd;
+            color: var(--apple-blue);
+            font-weight: 500;
+        }
+        
+        .country-item.completed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .country-item.not-found {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .results {
+            margin-top: 0;
+            display: none;
+            flex: 1;
+            flex-direction: column;
+        }
+        
+        .results-header {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--apple-black);
+        }
+        
+        .app-info {
+            background: var(--apple-white);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+            display: flex;
+            gap: 15px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .app-info:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+        }
+        
+        .app-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 14px;
+            object-fit: cover;
+        }
+        
+        .app-details {
+            flex: 1;
+        }
+        
+        .app-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--apple-black);
+            margin: 0 0 6px 0;
+            line-height: 1.2;
+        }
+        
+        .app-by {
+            color: var(--apple-dark-gray);
+            margin: 0 0 12px 0;
+            font-size: 14px;
+        }
+        
+        .app-description {
+            color: var(--apple-black);
+            line-height: 1.5;
+            margin-bottom: 15px;
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 14px;
+        }
+        
+        .app-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--apple-light-gray);
+        }
+        
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .meta-label {
+            font-weight: 600;
+            color: var(--apple-dark-gray);
+            font-size: 13px;
+            margin-bottom: 3px;
+        }
+        
+        .meta-value {
+            font-size: 14px;
+            color: var(--apple-black);
+        }
+        
+        .app-links {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .app-link {
+            color: var(--apple-blue);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .app-link:hover {
+            text-decoration: underline;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 30px 20px;
+            display: none;
+            flex: 1;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        .spinner {
+            width: 35px;
+            height: 35px;
+            border: 4px solid rgba(0, 113, 227, 0.2);
+            border-top: 4px solid var(--apple-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 16px;
+            color: var(--apple-dark-gray);
+        }
+        
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 14px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+            text-align: center;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .history-container {
+            background: var(--apple-white);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .history-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--apple-black);
+            margin: 0;
+        }
+        
+        /* 清除历史按钮 - 删除图标样式 */
+        .clear-history-btn {
+            background-color: transparent !important;
+            color: #ff3b30 !important; /* 苹果红色 */
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: normal;
+            min-width: auto;
+            width: auto;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: none !important;
+        }
+        
+        .clear-history-btn:hover {
+            background-color: rgba(255, 59, 48, 0.1) !important;
+            transform: translateY(-1px);
+            box-shadow: none !important;
+        }
+        
+        .history-list {
+            max-height: none; /* 移除滚动 */
+        }
+        
+        .history-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--apple-light-gray);
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .history-item-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .history-actions {
+            display: flex;
+            gap: 6px;
+            margin-left: 8px;
+        }
+        
+        .history-action-btn {
+            background-color: #e0f2f1;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #00796b;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-width: 60px;
+            width: 60px;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+        }
+        
+        .history-action-btn:hover {
+            background-color: #b2dfdb;
+            transform: translateY(-1px);
+            box-shadow: none;
+        }
+        
+        .view-more-btn {
+            background-color: var(--apple-blue);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 60px;
+            width: 60px;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .view-more-btn:hover {
+            background-color: var(--apple-dark-blue);
+            transform: translateY(-1px);
+        }
+        
+        .history-action-btn:hover {
+            background-color: var(--apple-dark-blue);
+            transform: translateY(-1px);
+        }
+        
+
+        
+        .history-query {
+            font-weight: 500;
+            color: var(--apple-black);
+            font-size: 13px;
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+        
+        .history-tags {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        
+        .history-tag {
+            font-size: 10px;
+            color: var(--apple-dark-gray);
+            background: var(--apple-light-gray);
+            padding: 2px 5px;
+            border-radius: 3px;
+            display: inline-block;
+            vertical-align: baseline;
+        }
+        
+        .history-time {
+            font-size: 11px;
+            color: var(--apple-dark-gray);
+        }
+        
+        .view-more-container {
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .view-more-btn {
+            background-color: var(--apple-blue);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 40px;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .view-more-btn:hover {
+            background-color: var(--apple-dark-blue);
+            transform: translateY(-1px);
+        }
+        
+        /* 隐藏超出部分的历史记录 */
+        .history-item.hidden {
+            display: none;
+        }
+        
+        /* 响应式设计 - 当屏幕较小时切换为上下布局 */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 50vh;
+                border-right: none;
+                border-bottom: 1px solid var(--apple-medium-gray);
+            }
+            
+            .main-content {
+                height: calc(100vh - 50vh);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧边栏：搜索框和搜索历史 -->
+        <div class="sidebar">
+            <header>
+                <h1>App Store 信息查询工具</h1>
+                <div class="subtitle">通过Bundle ID或App ID查询全球App Store应用信息</div>
+            </header>
+            
+            <div class="search-container">
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="bundleId">Bundle ID:</label>
+                        <input type="text" id="bundleId" placeholder="例如: com.apple.MobileSMS">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="appId">App ID:</label>
+                        <input type="text" id="appId" placeholder="例如: 324684451">
+                    </div>
+                </div>
+                
+                <div class="search-btn-container">
+                    <button onclick="searchAppInfo()">搜索</button>
+                </div>
+            </div>
+            
+            <div class="history-container" id="historyContainer">
+                <div class="history-header">
+                    <h3 class="history-title">搜索历史</h3>
+                    <button class="clear-history-btn" onclick="clearHistory()">🗑️</button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <!-- 搜索历史将在这里显示 -->
+                </div>
+                <div class="view-more-container" id="viewMoreContainer" style="display:none;">
+                    <button class="view-more-btn" onclick="toggleHistoryView()">查看更多</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧面板：国家列表和结果 -->
+        <div class="main-content">
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-header" onclick="toggleProgress()">
+                    <div class="progress-title">正在查询各国App Store...</div>
+                    <div class="toggle-icon">▲</div>
+                </div>
+                <div class="countries-grid-container" id="countriesGridContainer">
+                    <div class="countries-grid" id="countriesGrid">
+                        <!-- 国家查询进度将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div class="loading-text">正在搜索应用信息，请稍候...</div>
+            </div>
+            
+            <div class="error" id="error"></div>
+            
+            <div class="results" id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        // 苹果App Store覆盖的全部国家和地区
+        const countries = [
+            // 美洲 (Americas)
+            { code: 'US', name: '美国' },
+            { code: 'CA', name: '加拿大' },
+            { code: 'MX', name: '墨西哥' },
+            { code: 'BR', name: '巴西' },
+            { code: 'AR', name: '阿根廷' },
+            { code: 'CL', name: '智利' },
+            { code: 'CO', name: '哥伦比亚' },
+            { code: 'PE', name: '秘鲁' },
+            { code: 'VE', name: '委内瑞拉' },
+            { code: 'EC', name: '厄瓜多尔' },
+            { code: 'GT', name: '危地马拉' },
+            { code: 'CU', name: '古巴' },
+            { code: 'JM', name: '牙买加' },
+            { code: 'HT', name: '海地' },
+            
+            // 欧洲 (Europe)
+            { code: 'GB', name: '英国' },
+            { code: 'DE', name: '德国' },
+            { code: 'FR', name: '法国' },
+            { code: 'IT', name: '意大利' },
+            { code: 'ES', name: '西班牙' },
+            { code: 'NL', name: '荷兰' },
+            { code: 'SE', name: '瑞典' },
+            { code: 'NO', name: '挪威' },
+            { code: 'DK', name: '丹麦' },
+            { code: 'FI', name: '芬兰' },
+            { code: 'CH', name: '瑞士' },
+            { code: 'BE', name: '比利时' },
+            { code: 'AT', name: '奥地利' },
+            { code: 'PT', name: '葡萄牙' },
+            { code: 'PL', name: '波兰' },
+            { code: 'TR', name: '土耳其' },
+            { code: 'RU', name: '俄罗斯' },
+            { code: 'UA', name: '乌克兰' },
+            { code: 'CZ', name: '捷克' },
+            { code: 'HU', name: '匈牙利' },
+            { code: 'RO', name: '罗马尼亚' },
+            { code: 'BG', name: '保加利亚' },
+            { code: 'HR', name: '克罗地亚' },
+            { code: 'SK', name: '斯洛伐克' },
+            { code: 'SI', name: '斯洛文尼亚' },
+            { code: 'LT', name: '立陶宛' },
+            { code: 'LV', name: '拉脱维亚' },
+            { code: 'EE', name: '爱沙尼亚' },
+            { code: 'IE', name: '爱尔兰' },
+            { code: 'LU', name: '卢森堡' },
+            { code: 'MT', name: '马耳他' },
+            { code: 'IS', name: '冰岛' },
+            { code: 'AL', name: '阿尔巴尼亚' },
+            { code: 'AD', name: '安道尔' },
+            { code: 'BY', name: '白俄罗斯' },
+            { code: 'BA', name: '波斯尼亚和黑塞哥维那' },
+            { code: 'FO', name: '法罗群岛' },
+            { code: 'GI', name: '直布罗陀' },
+            { code: 'GR', name: '希腊' },
+            { code: 'VA', name: '梵蒂冈' },
+            { code: 'MK', name: '北马其顿' },
+            { code: 'MD', name: '摩尔多瓦' },
+            { code: 'ME', name: '黑山' },
+            { code: 'MC', name: '摩纳哥' },
+            { code: 'RS', name: '塞尔维亚' },
+            { code: 'AM', name: '亚美尼亚' },
+            { code: 'AZ', name: '阿塞拜疆' },
+            { code: 'GE', name: '格鲁吉亚' },
+            { code: 'XK', name: '科索沃' },
+            { code: 'LI', name: '列支敦士登' },
+            { code: 'SM', name: '圣马力诺' },
+            
+            // 亚太地区 (Asia-Pacific)
+            { code: 'AU', name: '澳大利亚' },
+            { code: 'NZ', name: '新西兰' },
+            { code: 'JP', name: '日本' },
+            { code: 'KR', name: '韩国' },
+            { code: 'CN', name: '中国' },
+            { code: 'HK', name: '中国香港' },
+            { code: 'TW', name: '中国台湾' },
+            { code: 'SG', name: '新加坡' },
+            { code: 'MY', name: '马来西亚' },
+            { code: 'TH', name: '泰国' },
+            { code: 'PH', name: '菲律宾' },
+            { code: 'VN', name: '越南' },
+            { code: 'ID', name: '印度尼西亚' },
+            { code: 'IN', name: '印度' },
+            { code: 'PK', name: '巴基斯坦' },
+            { code: 'BD', name: '孟加拉国' },
+            { code: 'LK', name: '斯里兰卡' },
+            { code: 'MM', name: '缅甸' },
+            { code: 'KH', name: '柬埔寨' },
+            { code: 'LA', name: '老挝' },
+            { code: 'MN', name: '蒙古' },
+            { code: 'NP', name: '尼泊尔' },
+            { code: 'BT', name: '不丹' },
+            { code: 'BN', name: '文莱' },
+            { code: 'FJ', name: '斐济' },
+            { code: 'NC', name: '新喀里多尼亚' },
+            { code: 'PG', name: '巴布亚新几内亚' },
+            
+            // 中东及非洲 (Middle East & Africa)
+            { code: 'SA', name: '沙特阿拉伯' },
+            { code: 'AE', name: '阿联酋' },
+            { code: 'IL', name: '以色列' },
+            { code: 'QA', name: '卡塔尔' },
+            { code: 'KW', name: '科威特' },
+            { code: 'BH', name: '巴林' },
+            { code: 'JO', name: '约旦' },
+            { code: 'LB', name: '黎巴嫩' },
+            { code: 'OM', name: '阿曼' },
+            { code: 'PS', name: '巴勒斯坦' },
+            { code: 'YE', name: '也门' },
+            { code: 'IQ', name: '伊拉克' },
+            { code: 'IR', name: '伊朗' },
+            { code: 'EG', name: '埃及' },
+            { code: 'MA', name: '摩洛哥' },
+            { code: 'DZ', name: '阿尔及利亚' },
+            { code: 'TN', name: '突尼斯' },
+            { code: 'LY', name: '利比亚' },
+            { code: 'GH', name: '加纳' },
+            { code: 'KE', name: '肯尼亚' },
+            { code: 'NG', name: '尼日利亚' },
+            { code: 'ZA', name: '南非' },
+            { code: 'CI', name: '科特迪瓦' },
+            { code: 'SN', name: '塞内加尔' },
+            { code: 'UG', name: '乌干达' },
+            { code: 'TZ', name: '坦桑尼亚' },
+            { code: 'ZM', name: '赞比亚' },
+            { code: 'ZW', name: '津巴布韦' },
+            { code: 'SZ', name: '斯威士兰' },
+            { code: 'MZ', name: '莫桑比克' },
+            { code: 'AO', name: '安哥拉' },
+            { code: 'CM', name: '喀麦隆' },
+            { code: 'ML', name: '马里' },
+            { code: 'BF', name: '布基纳法索' },
+            { code: 'TG', name: '多哥' },
+            { code: 'BJ', name: '贝宁' },
+            { code: 'GW', name: '几内亚比绍' },
+            { code: 'CV', name: '佛得角' },
+            { code: 'MU', name: '毛里求斯' },
+            { code: 'BW', name: '博茨瓦纳' },
+            { code: 'MZ', name: '莫桑比克' },
+            { code: 'MG', name: '马达加斯加' },
+            { code: 'LS', name: '莱索托' },
+            { code: 'GM', name: '冈比亚' },
+            { code: 'BI', name: '布隆迪' },
+            { code: 'MW', name: '马拉维' },
+            { code: 'LR', name: '利比里亚' },
+            { code: 'SL', name: '塞拉利昂' },
+            { code: 'NE', name: '尼日尔' },
+            { code: 'TD', name: '乍得' },
+            { code: 'CF', name: '中非共和国' },
+            { code: 'SS', name: '南苏丹' },
+            { code: 'KM', name: '科摩罗' },
+            { code: 'SC', name: '塞舌尔' },
+            { code: 'ST', name: '圣多美和普林西比' },
+            
+            // 补充国家
+            { code: 'CY', name: '塞浦路斯' },
+            { code: 'KZ', name: '哈萨克斯坦' },
+            { code: 'KG', name: '吉尔吉斯斯坦' },
+            { code: 'TJ', name: '塔吉克斯坦' },
+            { code: 'TM', name: '土库曼斯坦' },
+            { code: 'UZ', name: '乌兹别克斯坦' }
+        ];
+        
+        // 当前显示的历史记录数量
+        let currentHistoryDisplayCount = 10;
+        let allHistoryItems = [];
+        
+        // 主搜索函数
+        async function searchAppInfo() {
+            const appId = document.getElementById('appId').value.trim();
+            const bundleId = document.getElementById('bundleId').value.trim();
+            
+            if (!appId && !bundleId) {
+                showError('请输入App ID或Bundle ID');
+                return;
+            }
+            
+            if (appId && bundleId) {
+                showError('请只输入App ID或Bundle ID中的一个');
+                return;
+            }
+            
+            if (appId) {
+                // 保存到搜索历史
+                saveToHistory(appId, 'appId');
+                await searchByAppId(appId);
+            } else if (bundleId) {
+                // 保存到搜索历史
+                saveToHistory(bundleId, 'bundleId');
+                await searchByBundleIdWithCountries(bundleId);
+            }
+        }
+        
+        async function searchByAppId(appId) {
+            showLoading(true);
+            hideError();
+            hideResults();
+            hideProgress();
+            
+            try {
+                const appData = await lookupByAppId(appId);
+                
+                if (appData && appData.resultCount > 0) {
+                    displayResults(appData.results);
+                } else {
+                    showError('未找到相关的应用信息');
+                }
+            } catch (error) {
+                console.error('查询出错:', error);
+                showError('查询过程中出现错误: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function searchByBundleIdWithCountries(bundleId) {
+            showLoading(false);
+            hideError();
+            hideResults();
+            showProgress();
+            
+            // 初始化国家网格
+            initializeCountriesGrid();
+            
+            // 使用控制并发的并行查询
+            const results = await runConcurrentQueries(bundleId);
+            
+            // 查询完成后，显示查询到的国家列表
+            showCompletedCountries(results);
+            
+            if (results.length > 0) {
+                displayResults(results);
+            } else {
+                // 即使没有结果，也要更新国家列表显示
+                showCompletedCountries(results);
+                showError('在任何国家的App Store中均未找到该Bundle ID对应的應用');
+            }
+        }
+        
+        // 控制并发数量的函数
+        async function runConcurrentQueries(bundleId) {
+            const results = [];
+            const batchSize = 20; // 调整并发数到20
+            
+            // 将国家分成批次处理
+            for (let i = 0; i < countries.length; i += batchSize) {
+                const batch = countries.slice(i, i + batchSize);
+                
+                // 处理当前批次的并行查询
+                const batchPromises = batch.map(country => 
+                    processCountryQuery(bundleId, country, results) // 传递results数组用于实时更新
+                );
+                
+                const batchResults = await Promise.allSettled(batchPromises);
+                
+                // 处理每个查询的结果
+                for (const result of batchResults) {
+                    if (result.status === 'fulfilled' && result.value) {
+                        results.push(result.value);
+                    }
+                }
+                
+                // 批次间短暂延迟，避免请求过于频繁
+                if (i + batchSize < countries.length) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+            
+            return results;
+        }
+        
+        async function processCountryQuery(bundleId, country, resultsArray) {
+            try {
+                updateCountryStatus(country.code, 'processing');
+                
+                const appData = await lookupByBundleId(bundleId, country.code);
+                
+                if (appData && appData.resultCount > 0) {
+                    // 添加国家信息到结果
+                    const appResult = appData.results[0];
+                    appResult.country = country;
+                    updateCountryStatus(country.code, 'completed');
+                    
+                    // 实时添加到结果显示中
+                    if (document.getElementById('results').style.display !== 'none') {
+                        addToResultsDisplay([appResult]);
+                    }
+                    
+                    return appResult;
+                } else {
+                    updateCountryStatus(country.code, 'not-found');
+                    return null;
+                }
+            } catch (error) {
+                console.error(`查询${country.name}时出错:`, error);
+                updateCountryStatus(country.code, 'not-found');
+                return null;
+            }
+        }
+        
+        async function lookupByAppId(appId) {
+            const url = `https://itunes.apple.com/lookup?id=${appId}`;
+            console.log('正在查询App ID:', appId, 'URL:', url);
+            
+            try {
+                const response = await fetch(url);
+                console.log('API响应状态:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`API请求失败，状态码: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API响应数据:', data);
+                return data;
+            } catch (error) {
+                console.error('查询App ID时发生错误:', error);
+                throw error;
+            }
+        }
+        
+        async function lookupByBundleId(bundleId, country = 'US') {
+            const url = `https://itunes.apple.com/lookup?bundleId=${bundleId}&country=${country}`;
+            console.log('正在查询Bundle ID:', bundleId, '国家:', country, 'URL:', url);
+            
+            try {
+                const response = await fetch(url);
+                console.log('API响应状态:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`API请求失败，状态码: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API响应数据:', data);
+                return data;
+            } catch (error) {
+                console.error('查询Bundle ID时发生错误:', error);
+                throw error;
+            }
+        }
+        
+        function initializeCountriesGrid() {
+            const grid = document.getElementById('countriesGrid');
+            grid.innerHTML = '';
+            
+            countries.forEach(country => {
+                const div = document.createElement('div');
+                div.className = 'country-item';
+                div.id = `country-${country.code}`;
+                div.textContent = `${country.name} (${country.code})`;
+                grid.appendChild(div);
+            });
+        }
+        
+        function showCompletedCountries(results) {
+            const grid = document.getElementById('countriesGrid');
+            grid.innerHTML = '';
+            
+            if (results.length === 0) {
+                grid.innerHTML = '<div style="text-align: center; color: #888; font-size: 14px; padding: 10px;">未查询到任何国家的结果</div>';
+                return;
+            }
+            
+            // 获取唯一国家列表
+            const uniqueCountries = [];
+            const seenCodes = new Set();
+            
+            results.forEach(result => {
+                if (result.country && !seenCodes.has(result.country.code)) {
+                    uniqueCountries.push(result.country);
+                    seenCodes.add(result.country.code);
+                }
+            });
+            
+            // 显示查询到的国家
+            uniqueCountries.forEach(country => {
+                const div = document.createElement('div');
+                div.className = 'country-item completed';
+                div.textContent = `${country.name} (${country.code})`;
+                grid.appendChild(div);
+            });
+            
+            // 更新标题
+            const titleElement = document.querySelector('.progress-title');
+            if (titleElement) {
+                titleElement.textContent = `查询完成 - 找到 ${uniqueCountries.length} 个国家的结果`;
+            }
+        }
+        
+        function updateCountryStatus(countryCode, status) {
+            const element = document.getElementById(`country-${countryCode}`);
+            if (element) {
+                // 移除之前的类
+                element.classList.remove('processing', 'completed', 'not-found');
+                // 添加新的状态类
+                element.classList.add(status);
+            }
+        }
+        
+        function showProgress() {
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            // 初始化国家网格，确保国家列表显示
+            initializeCountriesGrid();
+        }
+        
+        function hideProgress() {
+            // 隐藏进度容器
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+        
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            
+            // 清空之前的结果
+            resultsDiv.innerHTML = '<h2 class="results-header">查询结果</h2>';
+            
+            // 添加所有结果
+            results.forEach(app => {
+                // 格式化价格
+                const formattedPrice = app.price !== undefined && app.price !== null ? 
+                    `${app.currency || ''}${app.price}` : '免费';
+                    
+                // 获取发布商网站链接
+                const sellerLink = app.sellerUrl ? `<a href="${app.sellerUrl}" target="_blank" class="app-link">访问开发者网站</a>` : '';
+                
+                // 获取App Store链接
+                const storeLink = `<a href="${app.trackViewUrl}" target="_blank" class="app-link">在App Store中查看</a>`;
+                
+                const resultHtml = `
+                <div class="app-info" id="app-result-${app.trackId || app.bundleId || Math.random()}">
+                    <img src="${app.artworkUrl100 || 'https://placehold.co/100x100?text=N/A'}" alt="App Icon" class="app-icon" onerror="this.src='https://placehold.co/100x100?text=N/A';">
+                    <div class="app-details">
+                        <h3 class="app-name">${app.trackName || 'N/A'}</h3>
+                        <div class="app-by">开发者: ${app.artistName || 'N/A'}</div>
+                        ${app.country ? `<div class="app-by">国家: ${app.country.name} (${app.country.code})</div>` : ''}
+                        <div class="app-description">${app.description ? app.description.substring(0, 300) + '...' : '暂无描述'}</div>
+                        
+                        <div class="app-meta">
+                            <div class="meta-item">
+                                <span class="meta-label">版本</span>
+                                <span class="meta-value">${app.version || 'N/A'}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">评分</span>
+                                <span class="meta-value">${app.averageUserRating ? app.averageUserRating.toFixed(1) : 'N/A'}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">价格</span>
+                                <span class="meta-value">${formattedPrice}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">类别</span>
+                                <span class="meta-value">${app.primaryGenreName || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="app-links">
+                            ${sellerLink}
+                            ${storeLink}
+                            ${app.trackViewUrl ? `<a href="${app.trackViewUrl}" target="_blank" class="app-link">查看所有版本</a>` : ''}
+                            <button class="app-link" onclick="showAppDetails(${JSON.stringify(app).split('"').join('&quot;')})" style="cursor:pointer; background-color: #FF9800; padding: 6px 12px; border-radius: 5px; text-decoration: none; display: inline-block; margin-left: 10px;">查看详情</button>
+                        </div>
+                    </div>
+                </div>
+                `;
+                
+                resultsDiv.insertAdjacentHTML('beforeend', resultHtml);
+            });
+            
+            resultsDiv.style.display = 'flex';
+            resultsDiv.style.flexDirection = 'column';
+        }
+        
+        function addToResultsDisplay(newResults) {
+            const resultsDiv = document.getElementById('results');
+            if (resultsDiv.style.display === 'none') {
+                resultsDiv.style.display = 'flex';
+                resultsDiv.style.flexDirection = 'column';
+                resultsDiv.innerHTML = '<h2 class="results-header">查询结果</h2>';
+            }
+            
+            newResults.forEach(app => {
+                // 格式化价格
+                const formattedPrice = app.price !== undefined && app.price !== null ? 
+                    `${app.currency || ''}${app.price}` : '免费';
+                    
+                // 获取发布商网站链接
+                const sellerLink = app.sellerUrl ? `<a href="${app.sellerUrl}" target="_blank" class="app-link">访问开发者网站</a>` : '';
+                
+                // 获取App Store链接
+                const storeLink = `<a href="${app.trackViewUrl}" target="_blank" class="app-link">在App Store中查看</a>`;
+                
+                const resultHtml = `
+                <div class="app-info" id="app-result-${app.trackId || app.bundleId || Math.random()}">
+                    <img src="${app.artworkUrl100 || 'https://placehold.co/100x100?text=N/A'}" alt="App Icon" class="app-icon" onerror="this.src='https://placehold.co/100x100?text=N/A';">
+                    <div class="app-details">
+                        <h3 class="app-name">${app.trackName || 'N/A'}</h3>
+                        <div class="app-by">开发者: ${app.artistName || 'N/A'}</div>
+                        ${app.country ? `<div class="app-by">国家: ${app.country.name} (${app.country.code})</div>` : ''}
+                        <div class="app-description">${app.description ? app.description.substring(0, 300) + '...' : '暂无描述'}</div>
+                        
+                        <div class="app-meta">
+                            <div class="meta-item">
+                                <span class="meta-label">版本</span>
+                                <span class="meta-value">${app.version || 'N/A'}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">评分</span>
+                                <span class="meta-value">${app.averageUserRating ? app.averageUserRating.toFixed(1) : 'N/A'}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">价格</span>
+                                <span class="meta-value">${formattedPrice}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">类别</span>
+                                <span class="meta-value">${app.primaryGenreName || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="app-links">
+                            ${sellerLink}
+                            ${storeLink}
+                            ${app.trackViewUrl ? `<a href="${app.trackViewUrl}" target="_blank" class="app-link">查看所有版本</a>` : ''}
+                            <button class="app-link" onclick="showAppDetails(${JSON.stringify(app).split('"').join('&quot;')})" style="cursor:pointer; background-color: #FF9800; padding: 6px 12px; border-radius: 5px; text-decoration: none; display: inline-block; margin-left: 10px;">查看详情</button>
+                        </div>
+                    </div>
+                </div>
+                `;
+                
+                resultsDiv.insertAdjacentHTML('beforeend', resultHtml);
+            });
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'flex' : 'none';
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+        
+        function hideResults() {
+            document.getElementById('results').style.display = 'none';
+        }
+        
+        function toggleProgress() {
+            const container = document.getElementById('countriesGridContainer');
+            const header = document.querySelector('.progress-header');
+            
+            container.classList.toggle('collapsed');
+            header.classList.toggle('collapsed');
+            
+            // 动态调整高度
+            if (container.classList.contains('collapsed')) {
+                container.style.maxHeight = '0';
+            } else {
+                container.style.maxHeight = 'none';
+            }
+        }
+        
+        // 搜索历史相关函数
+        function saveToHistory(query, type) {
+            // 获取现有历史记录
+            let history = JSON.parse(localStorage.getItem('appSearchHistory')) || [];
+            
+            // 创建新的历史记录项
+            const historyItem = {
+                query: query,
+                type: type, // 'appId' 或 'bundleId'
+                timestamp: new Date().toISOString()
+            };
+            
+            // 检查是否已存在相同查询（根据查询值去重，而不是根据时间）
+            const existingIndex = history.findIndex(item => item.query === query && item.type === type);
+            
+            if (existingIndex !== -1) {
+                // 如果存在，先移除旧记录
+                history.splice(existingIndex, 1);
+            }
+            
+            // 添加到历史记录数组的开头
+            history.unshift(historyItem);
+            
+            // 限制历史记录数量为50条
+            if (history.length > 50) {
+                history = history.slice(0, 50);
+            }
+            
+            // 保存到localStorage
+            localStorage.setItem('appSearchHistory', JSON.stringify(history));
+            
+            // 更新历史记录显示
+            updateHistoryDisplay();
+        }
+        
+        function loadHistory() {
+            return JSON.parse(localStorage.getItem('appSearchHistory')) || [];
+        }
+        
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('historyList');
+            const viewMoreContainer = document.getElementById('viewMoreContainer');
+            const history = loadHistory();
+            
+            // 保存所有历史记录以供后续使用
+            allHistoryItems = [...history];
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<div style="text-align: center; color: #888; font-size: 14px; padding: 10px;">暂无搜索历史</div>';
+                viewMoreContainer.style.display = 'none';
+                return;
+            }
+            
+            // 按时间倒序排列（最新的在前面）
+            history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // 限制显示数量
+            const itemsToShow = history.slice(0, currentHistoryDisplayCount);
+            const hasMore = history.length > currentHistoryDisplayCount;
+            
+            historyList.innerHTML = itemsToShow.map((item, index) => {
+                const date = new Date(item.timestamp);
+                const formattedTime = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                
+                return `
+                <div class="history-item">
+                    <div class="history-item-content">
+                        <div class="history-query">${item.query}</div>
+                        <div class="history-tags">
+                            <span class="history-tag">${item.type === 'appId' ? 'App ID' : 'Bundle ID'}</span>
+                        </div>
+                        <div class="history-time">${formattedTime}</div>
+                    </div>
+                    <div class="history-actions">
+                        <button class="history-action-btn" onclick="useHistoryQuery('${item.query}', '${item.type}')">查询</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            
+            // 显示或隐藏"查看更多"按钮
+            viewMoreContainer.style.display = hasMore ? 'block' : 'none';
+        }
+        
+        function toggleHistoryView() {
+            const viewMoreBtn = document.querySelector('.view-more-btn');
+            
+            if (viewMoreBtn.textContent === '查看更多') {
+                // 显示所有历史记录
+                currentHistoryDisplayCount = allHistoryItems.length;
+                viewMoreBtn.textContent = '收起';
+            } else {
+                // 只显示前10个
+                currentHistoryDisplayCount = 10;
+                viewMoreBtn.textContent = '查看更多';
+            }
+            
+            updateHistoryDisplay();
+        }
+        
+
+        function useHistoryQuery(query, type) {
+            if (type === 'appId') {
+                document.getElementById('appId').value = query;
+                document.getElementById('bundleId').value = '';
+            } else {
+                document.getElementById('bundleId').value = query;
+                document.getElementById('appId').value = '';
+            }
+            // 直接执行搜索
+            searchAppInfo();
+        }
+        
+        function clearHistory() {
+            if (confirm('确定要清空所有搜索历史吗？')) {
+                localStorage.removeItem('appSearchHistory');
+                currentHistoryDisplayCount = 10; // 重置显示计数
+                updateHistoryDisplay();
+            }
+        }
+        
+        function showAppDetails(appData) {
+            // 显示完整的应用详情弹窗
+            let details = `应用名称: ${appData.trackName || 'N/A'}\n`;
+            details += `开发者: ${appData.artistName || 'N/A'}\n`;
+            details += `版本: ${appData.version || 'N/A'}\n`;
+            details += `价格: ${appData.price !== undefined && appData.price !== null ? (appData.currency || '') + appData.price : '免费'}\n`;
+            details += `评分: ${appData.averageUserRating ? appData.averageUserRating.toFixed(1) : 'N/A'}\n`;
+            details += `类别: ${appData.primaryGenreName || 'N/A'}\n`;
+            details += `描述: ${appData.description || 'N/A'}\n`;
+            details += `国家: ${appData.country ? appData.country.name + ' (' + appData.country.code + ')' : 'N/A'}\n`;
+            details += `App Store链接: ${appData.trackViewUrl || 'N/A'}\n`;
+            
+            alert(details);
+        }
+        
+        // 页面加载完成后初始化历史记录显示
+        document.addEventListener('DOMContentLoaded', function() {
+            updateHistoryDisplay();
+            
+            // 绑定回车键事件
+            document.getElementById('appId').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchAppInfo();
+                }
+            });
+            
+            document.getElementById('bundleId').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchAppInfo();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
