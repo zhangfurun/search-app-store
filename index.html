@@ -913,7 +913,7 @@
         // 控制并发数量的函数
         async function runConcurrentQueries(bundleId) {
             const results = [];
-            const batchSize = 20; // 调整并发数到20
+            const batchSize = isLocalhost ? 20 : 5; // 本地20并发，远程5并发避免代理限速
             
             // 将国家分成批次处理
             for (let i = 0; i < countries.length; i += batchSize) {
@@ -971,65 +971,49 @@
             }
         }
         
-        // CORS 代理列表，按优先级排序
-        const corsProxies = [
-            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        ];
+        // 检测是否为本地环境
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.protocol === 'file:';
+        
+        // 带超时的 fetch
+        async function fetchWithTimeout(url, timeout = 5000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            
+            try {
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                clearTimeout(timeoutId);
+                throw error;
+            }
+        }
         
         async function fetchWithCorsProxy(url) {
-            // 先尝试直接请求
-            try {
-                const response = await fetch(url);
-                if (response.ok) {
-                    return await response.json();
-                }
-            } catch (e) {
-                console.log('直接请求失败，尝试使用代理');
+            // 本地环境直接请求
+            if (isLocalhost) {
+                return await fetchWithTimeout(url, 8000);
             }
             
-            // 尝试各个代理
-            for (const proxyFn of corsProxies) {
-                try {
-                    const proxyUrl = proxyFn(url);
-                    const response = await fetch(proxyUrl);
-                    if (response.ok) {
-                        return await response.json();
-                    }
-                } catch (e) {
-                    console.log('代理请求失败，尝试下一个');
-                }
-            }
-            
-            throw new Error('所有请求方式均失败');
+            // 远程环境使用代理
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+            return await fetchWithTimeout(proxyUrl, 10000);
         }
         
         async function lookupByAppId(appId) {
             const url = `https://itunes.apple.com/lookup?id=${appId}`;
-            console.log('正在查询App ID:', appId, 'URL:', url);
-            
-            try {
-                const data = await fetchWithCorsProxy(url);
-                console.log('API响应数据:', data);
-                return data;
-            } catch (error) {
-                console.error('查询App ID时发生错误:', error);
-                throw error;
-            }
+            console.log('正在查询App ID:', appId);
+            return await fetchWithCorsProxy(url);
         }
         
         async function lookupByBundleId(bundleId, country = 'US') {
             const url = `https://itunes.apple.com/lookup?bundleId=${bundleId}&country=${country}`;
-            console.log('正在查询Bundle ID:', bundleId, '国家:', country, 'URL:', url);
-            
-            try {
-                const data = await fetchWithCorsProxy(url);
-                console.log('API响应数据:', data);
-                return data;
-            } catch (error) {
-                console.error('查询Bundle ID时发生错误:', error);
-                throw error;
-            }
+            return await fetchWithCorsProxy(url);
         }
         
         function initializeCountriesGrid() {
