@@ -913,7 +913,7 @@
         // 控制并发数量的函数
         async function runConcurrentQueries(bundleId) {
             const results = [];
-            const batchSize = isLocalhost ? 20 : 5; // 本地20并发，远程5并发避免代理限速
+            const batchSize = 5; // 降低并发避免代理限速
             
             // 将国家分成批次处理
             for (let i = 0; i < countries.length; i += batchSize) {
@@ -971,13 +971,8 @@
             }
         }
         
-        // 检测是否为本地环境
-        const isLocalhost = window.location.hostname === 'localhost' || 
-                           window.location.hostname === '127.0.0.1' ||
-                           window.location.protocol === 'file:';
-        
         // 带超时的 fetch
-        async function fetchWithTimeout(url, timeout = 5000) {
+        async function fetchWithTimeout(url, timeout = 15000) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeout);
             
@@ -995,19 +990,13 @@
         }
         
         async function fetchWithCorsProxy(url) {
-            // 本地环境直接请求
-            if (isLocalhost) {
-                return await fetchWithTimeout(url, 8000);
-            }
-            
-            // 远程环境使用代理
+            // 统一使用 CORS 代理
             const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-            return await fetchWithTimeout(proxyUrl, 10000);
+            return await fetchWithTimeout(proxyUrl, 15000);
         }
         
         async function lookupByAppId(appId) {
             const url = `https://itunes.apple.com/lookup?id=${appId}`;
-            console.log('正在查询App ID:', appId);
             return await fetchWithCorsProxy(url);
         }
         
