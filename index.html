@@ -910,36 +910,37 @@
             }
         }
         
-        // 控制并发数量的函数
+        // 控制并发数量的函数 - 始终保持 maxConcurrent 个并发
         async function runConcurrentQueries(bundleId) {
             const results = [];
-            const batchSize = 5; // 降低并发避免代理限速
+            const maxConcurrent = 20;
+            let index = 0;
+            let activeCount = 0;
             
-            // 将国家分成批次处理
-            for (let i = 0; i < countries.length; i += batchSize) {
-                const batch = countries.slice(i, i + batchSize);
-                
-                // 处理当前批次的并行查询
-                const batchPromises = batch.map(country => 
-                    processCountryQuery(bundleId, country, results) // 传递results数组用于实时更新
-                );
-                
-                const batchResults = await Promise.allSettled(batchPromises);
-                
-                // 处理每个查询的结果
-                for (const result of batchResults) {
-                    if (result.status === 'fulfilled' && result.value) {
-                        results.push(result.value);
+            return new Promise((resolve) => {
+                function startNext() {
+                    while (activeCount < maxConcurrent && index < countries.length) {
+                        const country = countries[index++];
+                        activeCount++;
+                        
+                        processCountryQuery(bundleId, country, results)
+                            .then(result => {
+                                if (result) results.push(result);
+                            })
+                            .catch(() => {})
+                            .finally(() => {
+                                activeCount--;
+                                if (index < countries.length) {
+                                    startNext();
+                                } else if (activeCount === 0) {
+                                    resolve(results);
+                                }
+                            });
                     }
                 }
                 
-                // 批次间短暂延迟，避免请求过于频繁
-                if (i + batchSize < countries.length) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-            }
-            
-            return results;
+                startNext();
+            });
         }
         
         async function processCountryQuery(bundleId, country, resultsArray) {
@@ -971,38 +972,22 @@
             }
         }
         
-        // 带超时的 fetch
-        async function fetchWithTimeout(url, timeout = 15000) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeout);
-            
-            try {
-                const response = await fetch(url, { signal: controller.signal });
-                clearTimeout(timeoutId);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                return await response.json();
-            } catch (error) {
-                clearTimeout(timeoutId);
-                throw error;
-            }
-        }
-        
-        async function fetchWithCorsProxy(url) {
-            // 统一使用 CORS 代理
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-            return await fetchWithTimeout(proxyUrl, 15000);
-        }
-        
         async function lookupByAppId(appId) {
-            const url = `https://itunes.apple.com/lookup?id=${appId}`;
-            return await fetchWithCorsProxy(url);
+            const url = `https://itunes.apple.com/lookup?id=${appId}&_t=${Date.now()}`;
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return await response.json();
         }
         
         async function lookupByBundleId(bundleId, country = 'US') {
-            const url = `https://itunes.apple.com/lookup?bundleId=${bundleId}&country=${country}`;
-            return await fetchWithCorsProxy(url);
+            const url = `https://itunes.apple.com/lookup?bundleId=${bundleId}&country=${country}&_t=${Date.now()}`;
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return await response.json();
         }
         
         function initializeCountriesGrid() {
